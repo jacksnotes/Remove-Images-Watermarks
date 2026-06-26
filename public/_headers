@@ -1,2 +1,13 @@
-/*
+/embed.html
+  Cache-Control: no-store
+  Cross-Origin-Resource-Policy: cross-origin
+
+/index.html
+  Cache-Control: no-store
+  Cross-Origin-Resource-Policy: cross-origin
+
+/assets/*
+  Cross-Origin-Resource-Policy: cross-origin
+
+/examples/*
   Cross-Origin-Resource-Policy: cross-origin
