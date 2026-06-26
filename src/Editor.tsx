@@ -2,7 +2,6 @@
 /* eslint-disable jsx-a11y/no-static-element-interactions */
 import { DownloadIcon, EyeIcon, ViewBoardsIcon } from '@heroicons/react/outline'
 import { useCallback, useEffect, useState, useRef, useMemo } from 'react'
-import { useWindowSize } from 'react-use'
 import inpaint from './adapters/inpainting'
 import superResolution from './adapters/superResolution'
 import Button from './components/Button'
@@ -72,59 +71,63 @@ export default function Editor(props: EditorProps) {
   const canvasDiv = useRef<HTMLDivElement>(null)
   const [downloaded, setDownloaded] = useState(true)
   const [downloadProgress, setDownloadProgress] = useState(0)
-  const windowSize = useWindowSize()
   const hasMask = lines.some(line => line.pts.length > 0)
+
+  const canvasSizeRef = useRef({ w: 0, h: 0 })
+  const hasSetSize = useRef(false)
+
+  // 图片加载后固定 canvas 像素尺寸，不再随容器变化
+  useEffect(() => {
+    if (
+      !context?.canvas ||
+      !isOriginalLoaded ||
+      !canvasDiv.current ||
+      hasSetSize.current
+    ) {
+      return
+    }
+    const dw = canvasDiv.current.offsetWidth
+    const dh = canvasDiv.current.offsetHeight
+    if (!dw || !dh) return
+    const imgAspect = original.width / original.height
+    const divAspect = dw / dh
+    let cw: number
+    let ch: number
+    if (divAspect > imgAspect) {
+      ch = dh
+      cw = original.width * (dh / original.height)
+    } else {
+      cw = dw
+      ch = original.height * (dw / original.width)
+    }
+    canvasSizeRef.current = { w: Math.round(cw), h: Math.round(ch) }
+    context.canvas.width = Math.round(cw)
+    context.canvas.height = Math.round(ch)
+    hasSetSize.current = true
+    draw()
+  }, [context?.canvas, isOriginalLoaded, original])
 
   const draw = useCallback(
     (index = -1) => {
-      if (!context) {
+      if (!context || !canvasSizeRef.current.w || !canvasSizeRef.current.h) {
         return
       }
-      context.clearRect(0, 0, context.canvas.width, context.canvas.height)
+      const { w, h } = canvasSizeRef.current
+      context.clearRect(0, 0, w, h)
       const currRender =
         renders[index === -1 ? renders.length - 1 : index] ?? original
-      const { canvas } = context
-
-      const divWidth = canvasDiv.current!.offsetWidth
-      const divHeight = canvasDiv.current!.offsetHeight
-
-      // 计算宽高比
-      const imgAspectRatio = currRender.width / currRender.height
-      const divAspectRatio = divWidth / divHeight
-
-      let canvasWidth
-      let canvasHeight
-
-      // 比较宽高比以决定如何缩放
-      if (divAspectRatio > imgAspectRatio) {
-        // div 较宽，基于高度缩放
-        canvasHeight = divHeight
-        canvasWidth = currRender.width * (divHeight / currRender.height)
-      } else {
-        // div 较窄，基于宽度缩放
-        canvasWidth = divWidth
-        canvasHeight = currRender.height * (divWidth / currRender.width)
-      }
-
-      canvas.width = canvasWidth
-      canvas.height = canvasHeight
-
-      if (currRender?.src) {
-        context.drawImage(currRender, 0, 0, canvas.width, canvas.height)
-      } else {
-        context.drawImage(original, 0, 0, canvas.width, canvas.height)
-      }
+      context.drawImage(currRender, 0, 0, w, h)
       drawLines(context, lines)
     },
     [context, lines, original, renders]
   )
 
   useEffect(() => {
-    if (!context?.canvas || !isOriginalLoaded) {
+    if (!context?.canvas || !isOriginalLoaded || !hasSetSize.current) {
       return
     }
     draw()
-  }, [draw, context?.canvas, isOriginalLoaded, lines, windowSize])
+  }, [draw, context?.canvas, isOriginalLoaded, lines])
 
   const getCanvasPoint = useCallback(
     (clientX: number, clientY: number) => {
@@ -554,10 +557,11 @@ export default function Editor(props: EditorProps) {
       {/* 画图 */}
       <div
         className={[
-          'relative my-2 flex w-full max-w-5xl flex-grow items-center justify-center',
+          'relative my-2 flex w-full max-w-5xl items-center justify-center overflow-hidden',
         ].join(' ')}
         style={{
           minHeight: 'min(62vh, 720px)',
+          maxHeight: '90vh',
         }}
         ref={canvasDiv}
       >
