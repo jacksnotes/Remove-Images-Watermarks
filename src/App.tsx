@@ -7,23 +7,26 @@ import {
 } from '@heroicons/react/outline'
 import { useEffect, useRef, useState } from 'react'
 import { useClickAway } from 'react-use'
+import { downloadModel } from './adapters/cache'
 import Button from './components/Button'
 import FileSelect from './components/FileSelect'
 import Modal from './components/Modal'
-import Editor from './Editor'
-import { resizeImageFile } from './utils'
 import Progress from './components/Progress'
-import { downloadModel } from './adapters/cache'
+import Editor from './Editor'
 import * as m from './paraglide/messages'
 import {
   languageTag,
   onSetLanguageTag,
   setLanguageTag,
 } from './paraglide/runtime'
+import { resizeImageFile } from './utils'
 
 const SOURCE_REPO_URL = 'https://github.com/lxfater/inpaint-web'
 const PUBLIC_REPO_URL =
   'https://github.com/jacksnotes/Remove-Images-Watermarks.git'
+const isEmbedMode =
+  typeof window !== 'undefined' &&
+  /\/embed\.html$/i.test(window.location.pathname)
 
 function App() {
   const [file, setFile] = useState<File>()
@@ -33,7 +36,6 @@ function App() {
 
   const [showAbout, setShowAbout] = useState(false)
   const modalRef = useRef(null)
-
   const [downloadProgress, setDownloadProgress] = useState(100)
 
   useEffect(() => {
@@ -47,6 +49,14 @@ function App() {
   async function startWithDemoImage(img: string) {
     const imgBlob = await fetch(`/examples/${img}.jpeg`).then(r => r.blob())
     setFile(new File([imgBlob], `${img}.jpeg`, { type: 'image/jpeg' }))
+  }
+
+  function toggleLanguage() {
+    if (languageTag() === 'zh') {
+      setLanguageTag('en')
+    } else {
+      setLanguageTag('zh')
+    }
   }
 
   const isZh = languageTag() === 'zh'
@@ -131,186 +141,203 @@ function App() {
           'Both the public repository and the upstream source are listed here so users can review the code, license, and attribution.',
       }
 
+  const uploadArea = (
+    <>
+      <div className="h-[22rem] max-w-5xl sm:h-80">
+        <FileSelect
+          onSelection={async f => {
+            const { file: resizedFile } = await resizeImageFile(f, 1024 * 4)
+            setFile(resizedFile)
+          }}
+        />
+      </div>
+
+      <div className="mt-8 flex flex-col items-start gap-4 lg:flex-row lg:items-center">
+        <span className="text-sm text-slate-400">{m.try_it_images()}</span>
+        <div className="flex flex-wrap gap-3">
+          {['bag', 'dog', 'car', 'bird', 'jacket', 'shoe', 'paris'].map(
+            image => (
+              <div
+                key={image}
+                onClick={() => startWithDemoImage(image)}
+                role="button"
+                onKeyDown={() => startWithDemoImage(image)}
+                tabIndex={-1}
+                className="overflow-hidden rounded-2xl border border-white/10 bg-white/5"
+              >
+                <img
+                  className="h-24 w-auto transition duration-200 hover:opacity-80"
+                  src={`examples/${image}.jpeg`}
+                  alt={image}
+                />
+              </div>
+            )
+          )}
+        </div>
+      </div>
+    </>
+  )
+
+  const headerControls = (
+    <div className="flex flex-wrap items-center gap-3">
+      <Button
+        className={[
+          file ? '' : 'opacity-50 pointer-events-none',
+          'border border-white/10 bg-white/5 text-white hover:bg-white/10',
+        ].join(' ')}
+        icon={<ArrowLeftIcon className="w-5 h-5" />}
+        onClick={() => {
+          setFile(undefined)
+        }}
+      >
+        <span>{m.start_new()}</span>
+      </Button>
+      <Button
+        className="border border-white/10 bg-white/5 text-white hover:bg-white/10"
+        onClick={toggleLanguage}
+      >
+        <p>{languageTag() === 'en' ? '切换到中文' : 'EN'}</p>
+      </Button>
+      {!isEmbedMode && (
+        <Button
+          className="border border-white/10 bg-white/5 text-white hover:bg-white/10"
+          icon={<InformationCircleIcon className="w-5 h-5" />}
+          onClick={() => {
+            setShowAbout(true)
+          }}
+        >
+          <p>{pageCopy.infoButton}</p>
+        </Button>
+      )}
+    </div>
+  )
+
+  let mainContent: JSX.Element
+
+  if (isEmbedMode) {
+    mainContent = file ? (
+      <div className="mx-auto flex min-h-screen max-w-7xl flex-col px-3 py-3 sm:px-4">
+        <div className="mb-3 flex justify-end">{headerControls}</div>
+        <div className="flex-1">
+          <Editor file={file} />
+        </div>
+      </div>
+    ) : (
+      <div className="mx-auto flex min-h-screen max-w-6xl flex-col justify-center px-3 py-6 sm:px-4">
+        <section className="rounded-3xl border border-white/10 bg-white/[0.04] p-4 shadow-2xl shadow-black/20 sm:p-6">
+          {uploadArea}
+        </section>
+      </div>
+    )
+  } else if (file) {
+    mainContent = (
+      <div className="mx-auto h-full max-w-7xl px-3 py-4 sm:px-6">
+        <Editor file={file} />
+      </div>
+    )
+  } else {
+    mainContent = (
+      <div className="mx-auto flex min-h-full max-w-7xl flex-col justify-center px-3 py-8 sm:px-6 lg:py-10">
+        <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_320px] lg:items-start">
+          <section className="rounded-3xl border border-white/10 bg-white/[0.04] p-6 shadow-2xl shadow-black/20 sm:p-8">
+            <div className="max-w-2xl space-y-4">
+              <p className="text-xs font-semibold uppercase tracking-[0.3em] text-teal-300">
+                {pageCopy.eyebrow}
+              </p>
+              <h1 className="text-3xl font-black tracking-tight text-white sm:text-5xl">
+                {pageCopy.title}
+              </h1>
+              <p className="text-base leading-7 text-slate-300 sm:text-lg">
+                {pageCopy.description}
+              </p>
+            </div>
+
+            <div className="mt-6 grid gap-3 text-sm text-slate-300 sm:grid-cols-3">
+              {pageCopy.features.map(feature => (
+                <div
+                  key={feature.title}
+                  className="rounded-2xl border border-white/10 bg-black/20 p-4"
+                >
+                  <p className="font-semibold text-white">{feature.title}</p>
+                  <p className="mt-2 leading-6">{feature.detail}</p>
+                </div>
+              ))}
+            </div>
+
+            <div className="mt-8">{uploadArea}</div>
+          </section>
+
+          <aside className="space-y-4 rounded-3xl border border-white/10 bg-white/[0.04] p-6 text-sm text-slate-300 shadow-2xl shadow-black/20">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.28em] text-teal-300">
+                {pageCopy.noticeEyebrow}
+              </p>
+              <h2 className="mt-2 text-xl font-bold text-white">
+                {pageCopy.noticeTitle}
+              </h2>
+            </div>
+            <p className="leading-6">{pageCopy.noticeBody}</p>
+            <a
+              href={PUBLIC_REPO_URL}
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex items-center gap-2 rounded-xl border border-teal-400/30 bg-teal-400/10 px-4 py-3 font-semibold text-teal-200 transition hover:bg-teal-400/20"
+            >
+              <ExternalLinkIcon className="h-5 w-5" />
+              {pageCopy.publicRepo}
+            </a>
+            <a
+              href={SOURCE_REPO_URL}
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-4 py-3 font-semibold text-slate-100 transition hover:bg-white/10"
+            >
+              <ExternalLinkIcon className="h-5 w-5" />
+              {pageCopy.sourceRepo}
+            </a>
+            <div className="rounded-2xl border border-amber-400/20 bg-amber-400/10 p-4 text-amber-100">
+              <p className="font-semibold">{pageCopy.copyrightTitle}</p>
+              <p className="mt-2 leading-6">{pageCopy.copyrightBody}</p>
+            </div>
+          </aside>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="min-h-full bg-slate-950 text-slate-100">
-      <header className="sticky top-0 z-10 border-b border-white/10 bg-slate-950/90 backdrop-blur">
-        <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-3 sm:px-6">
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-teal-400/15 text-lg font-black text-teal-300">
-              V
+      {!isEmbedMode && (
+        <header className="sticky top-0 z-10 border-b border-white/10 bg-slate-950/90 backdrop-blur">
+          <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-3 sm:px-6">
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-teal-400/15 text-lg font-black text-teal-300">
+                V
+              </div>
+              <div>
+                <p className="text-[11px] font-semibold uppercase tracking-[0.28em] text-teal-300">
+                  VidFlowLab
+                </p>
+                <p className="text-sm font-semibold text-white">
+                  {pageCopy.brandSubtitle}
+                </p>
+              </div>
             </div>
-            <div>
-              <p className="text-[11px] font-semibold uppercase tracking-[0.28em] text-teal-300">
-                VidFlowLab
-              </p>
-              <p className="text-sm font-semibold text-white">
-                {pageCopy.brandSubtitle}
-              </p>
-            </div>
+            <div className="hidden md:flex">{headerControls}</div>
           </div>
-
-          <div className="hidden items-center gap-3 md:flex">
-            <Button
-              className={[
-                file ? '' : 'opacity-50 pointer-events-none',
-                'border border-white/10 bg-white/5 text-white hover:bg-white/10',
-              ].join(' ')}
-              icon={<ArrowLeftIcon className="w-5 h-5" />}
-              onClick={() => {
-                setFile(undefined)
-              }}
-            >
-              <span>{m.start_new()}</span>
-            </Button>
-            <Button
-              className="border border-white/10 bg-white/5 text-white hover:bg-white/10"
-              onClick={() => {
-                if (languageTag() === 'zh') {
-                  setLanguageTag('en')
-                } else {
-                  setLanguageTag('zh')
-                }
-              }}
-            >
-              <p>{languageTag() === 'en' ? '切换到中文' : 'EN'}</p>
-            </Button>
-            <Button
-              className="border border-white/10 bg-white/5 text-white hover:bg-white/10"
-              icon={<InformationCircleIcon className="w-5 h-5" />}
-              onClick={() => {
-                setShowAbout(true)
-              }}
-            >
-              <p>{pageCopy.infoButton}</p>
-            </Button>
-          </div>
-        </div>
-      </header>
+        </header>
+      )}
 
       <main
         style={{
-          minHeight: 'calc(100vh - 64px)',
+          minHeight: isEmbedMode ? '100vh' : 'calc(100vh - 64px)',
         }}
         className="relative"
       >
-        {file ? (
-          <div className="mx-auto h-full max-w-7xl px-3 py-4 sm:px-6">
-            <Editor file={file} />
-          </div>
-        ) : (
-          <div className="mx-auto flex min-h-full max-w-7xl flex-col justify-center px-3 py-8 sm:px-6 lg:py-10">
-            <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_320px] lg:items-start">
-              <section className="rounded-3xl border border-white/10 bg-white/[0.04] p-6 shadow-2xl shadow-black/20 sm:p-8">
-                <div className="max-w-2xl space-y-4">
-                  <p className="text-xs font-semibold uppercase tracking-[0.3em] text-teal-300">
-                    {pageCopy.eyebrow}
-                  </p>
-                  <h1 className="text-3xl font-black tracking-tight text-white sm:text-5xl">
-                    {pageCopy.title}
-                  </h1>
-                  <p className="text-base leading-7 text-slate-300 sm:text-lg">
-                    {pageCopy.description}
-                  </p>
-                </div>
-
-                <div className="mt-6 grid gap-3 text-sm text-slate-300 sm:grid-cols-3">
-                  {pageCopy.features.map(feature => (
-                    <div
-                      key={feature.title}
-                      className="rounded-2xl border border-white/10 bg-black/20 p-4"
-                    >
-                      <p className="font-semibold text-white">
-                        {feature.title}
-                      </p>
-                      <p className="mt-2 leading-6">{feature.detail}</p>
-                    </div>
-                  ))}
-                </div>
-
-                <div className="mt-8 h-[22rem] max-w-5xl sm:h-80">
-                  <FileSelect
-                    onSelection={async f => {
-                      const { file: resizedFile } = await resizeImageFile(
-                        f,
-                        1024 * 4
-                      )
-                      setFile(resizedFile)
-                    }}
-                  />
-                </div>
-
-                <div className="mt-8 flex flex-col items-start gap-4 lg:flex-row lg:items-center">
-                  <span className="text-sm text-slate-400">
-                    {m.try_it_images()}
-                  </span>
-                  <div className="flex flex-wrap gap-3">
-                    {[
-                      'bag',
-                      'dog',
-                      'car',
-                      'bird',
-                      'jacket',
-                      'shoe',
-                      'paris',
-                    ].map(image => (
-                      <div
-                        key={image}
-                        onClick={() => startWithDemoImage(image)}
-                        role="button"
-                        onKeyDown={() => startWithDemoImage(image)}
-                        tabIndex={-1}
-                        className="overflow-hidden rounded-2xl border border-white/10 bg-white/5"
-                      >
-                        <img
-                          className="h-24 w-auto transition duration-200 hover:opacity-80"
-                          src={`examples/${image}.jpeg`}
-                          alt={image}
-                        />
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </section>
-
-              <aside className="space-y-4 rounded-3xl border border-white/10 bg-white/[0.04] p-6 text-sm text-slate-300 shadow-2xl shadow-black/20">
-                <div>
-                  <p className="text-xs font-semibold uppercase tracking-[0.28em] text-teal-300">
-                    {pageCopy.noticeEyebrow}
-                  </p>
-                  <h2 className="mt-2 text-xl font-bold text-white">
-                    {pageCopy.noticeTitle}
-                  </h2>
-                </div>
-                <p className="leading-6">{pageCopy.noticeBody}</p>
-                <a
-                  href={PUBLIC_REPO_URL}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="inline-flex items-center gap-2 rounded-xl border border-teal-400/30 bg-teal-400/10 px-4 py-3 font-semibold text-teal-200 transition hover:bg-teal-400/20"
-                >
-                  <ExternalLinkIcon className="h-5 w-5" />
-                  {pageCopy.publicRepo}
-                </a>
-                <a
-                  href={SOURCE_REPO_URL}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-4 py-3 font-semibold text-slate-100 transition hover:bg-white/10"
-                >
-                  <ExternalLinkIcon className="h-5 w-5" />
-                  {pageCopy.sourceRepo}
-                </a>
-                <div className="rounded-2xl border border-amber-400/20 bg-amber-400/10 p-4 text-amber-100">
-                  <p className="font-semibold">{pageCopy.copyrightTitle}</p>
-                  <p className="mt-2 leading-6">{pageCopy.copyrightBody}</p>
-                </div>
-              </aside>
-            </div>
-          </div>
-        )}
+        {mainContent}
       </main>
 
-      {showAbout && (
+      {!isEmbedMode && showAbout && (
         <Modal>
           <div
             ref={modalRef}
@@ -346,7 +373,8 @@ function App() {
           </div>
         </Modal>
       )}
-      {!(downloadProgress === 100) && (
+
+      {downloadProgress !== 100 && (
         <Modal>
           <div className="text-xl space-y-5">
             <p>{m.inpaint_model_download_message()}</p>
