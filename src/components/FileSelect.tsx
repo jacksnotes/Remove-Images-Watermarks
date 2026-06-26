@@ -97,15 +97,15 @@ export default function FileSelect(props: FileSelectProps) {
   return (
     <label
       htmlFor={uploadElemId}
-      className="block w-full h-full group relative cursor-pointer rounded-md font-medium focus-within:outline-none"
+      className="group relative block h-full w-full cursor-pointer rounded-2xl font-medium focus-within:outline-none"
     >
       <div
         className={[
-          'w-full h-full flex items-center justify-center px-6 pt-5 pb-6 text-xl',
-          'border-4 border-dashed rounded-md',
-          'hover:border-black hover:bg-primary',
-          'text-center',
-          dragHover ? 'border-black bg-primary' : 'bg-gray-100 border-gray-300',
+          'flex h-full w-full items-center justify-center px-6 pb-6 pt-5 text-center text-lg font-semibold',
+          'rounded-2xl border-2 border-dashed transition-colors duration-150',
+          dragHover
+            ? 'border-lime-300 bg-lime-300 text-slate-950'
+            : 'border-slate-600 bg-slate-100 text-slate-700 hover:border-teal-300 hover:bg-slate-50',
         ].join(' ')}
         onDrop={handleDrop}
         onDragOver={ev => {
@@ -128,7 +128,12 @@ export default function FileSelect(props: FileSelectProps) {
           }}
           accept="image/png, image/jpeg, image/webp"
         />
-        <p>{m.drop_zone()}</p>
+        <div className="space-y-2">
+          <p>{m.drop_zone()}</p>
+          <p className="text-sm font-normal text-slate-500 group-hover:text-slate-600">
+            PNG / JPG / WEBP，单文件 10MB 以内
+          </p>
+        </div>
       </div>
     </label>
   )

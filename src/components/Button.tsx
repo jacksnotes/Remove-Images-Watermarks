@@ -31,13 +31,15 @@ export default function Button(props: ButtonProps) {
   const [active, setActive] = useState(false)
   let background = ''
   if (primary) {
-    background = 'bg-primary hover:bg-black hover:text-white'
+    background =
+      'border border-lime-300/80 bg-lime-300 text-slate-950 hover:bg-lime-200'
   }
   if (active) {
-    background = 'bg-black text-white'
+    background = 'border border-teal-300/80 bg-teal-300 text-slate-950'
   }
   if (!primary && !active) {
-    background = 'hover:bg-primary'
+    background =
+      'border border-white/10 bg-white/5 text-slate-100 hover:bg-white/10'
   }
   return (
     <div
@@ -62,7 +64,7 @@ export default function Button(props: ButtonProps) {
       }}
       tabIndex={-1}
       className={[
-        'inline-flex space-x-3 py-3 px-5 rounded-md cursor-pointer',
+        'inline-flex items-center justify-center gap-3 rounded-xl px-5 py-3 text-sm font-semibold transition-colors duration-150',
         background,
         className,
       ].join(' ')}
