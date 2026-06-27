@@ -155,24 +155,22 @@ function App() {
       <div className="mt-8 flex flex-col items-start gap-4 lg:flex-row lg:items-center">
         <span className="text-sm text-slate-400">{m.try_it_images()}</span>
         <div className="flex flex-wrap gap-3">
-          {['bag', 'dog', 'car', 'bird', 'jacket', 'shoe', 'paris'].map(
-            image => (
-              <div
-                key={image}
-                onClick={() => startWithDemoImage(image)}
-                role="button"
-                onKeyDown={() => startWithDemoImage(image)}
-                tabIndex={-1}
-                className="overflow-hidden rounded-2xl border border-white/10 bg-white/5"
-              >
-                <img
-                  className="h-24 w-auto transition duration-200 hover:opacity-80"
-                  src={`examples/${image}.jpeg`}
-                  alt={image}
-                />
-              </div>
-            )
-          )}
+          {['bag', 'dog', 'car', 'bird', 'jacket', 'shoe'].map(image => (
+            <div
+              key={image}
+              onClick={() => startWithDemoImage(image)}
+              role="button"
+              onKeyDown={() => startWithDemoImage(image)}
+              tabIndex={-1}
+              className="overflow-hidden rounded-2xl border border-white/10 bg-white/5"
+            >
+              <img
+                className="h-24 w-auto transition duration-200 hover:opacity-80"
+                src={`examples/${image}.jpeg`}
+                alt={image}
+              />
+            </div>
+          ))}
         </div>
       </div>
     </>
